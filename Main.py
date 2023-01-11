@@ -5,15 +5,17 @@ from pygame.locals import *
 
 pygame.init()
 
-mode = "game"
+mode = "menu"
 DISPLAY_SIZE = (1000, 800)
-SPEED = (DISPLAY_SIZE[0]//100 + DISPLAY_SIZE[1]//100)//2
+NORMAL_SPEED = (DISPLAY_SIZE[0]//100 + DISPLAY_SIZE[1]//100)//2
+speed = 0
 DISPLAY = pygame.display.set_mode(DISPLAY_SIZE)
 pygame.display.set_caption('MiniGame')
 
 FPS = 30
 FPS_CLOCK = pygame.time.Clock()
 
+score = 0
 minimum_time = 0
 done = False
 
@@ -22,6 +24,7 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 WHITE = (255, 255, 255)
+ORANGE = (255, 165, 0)
 
 FONT = pygame.font.Font('freesansbold.ttf', 32)
 TEXT_LOSE = FONT.render('YOU LOST', True, RED)
@@ -30,8 +33,7 @@ TEXT_RESET = FONT.render('AGAIN', True, BLACK)
 text_rect = TEXT_LOSE.get_rect()
 text_rect.center = (DISPLAY_SIZE[0]//2, DISPLAY_SIZE[1]//2)
 
-button_reset_rect = pygame.Rect(DISPLAY_SIZE[0]//2-150, DISPLAY_SIZE[1]//2+100, 120, 40)
-button_quit_rect = pygame.Rect(DISPLAY_SIZE[0]//2+50, DISPLAY_SIZE[1]//2+100, 100, 40)
+
 platform = pygame.Rect(DISPLAY_SIZE[0]//2, DISPLAY_SIZE[1]-100, 100, 10)
 kill_zone = pygame.Rect(0, DISPLAY_SIZE[1]-10, DISPLAY_SIZE[0], 10)
 
@@ -41,8 +43,8 @@ class Ball:
         self.x = DISPLAY_SIZE[0]//2
         self.y = DISPLAY_SIZE[1]//2
         self.vel = {
-            "x": random.choice([SPEED, SPEED*-1])+random.choice([SPEED//5, SPEED//5*-1]),
-            "y": SPEED*-1+random.choice([SPEED//5, SPEED//5*-1])
+            "x": random.choice([speed, speed*-1])+random.choice([speed//5, speed//5*-1]),
+            "y": speed*-1+random.choice([speed//5, speed//5*-1])
         }
         self.radius = 10
         self.rect = pygame.Rect(self.x-self.radius, self.y-self.radius, 2*self.radius, 2*self.radius)
@@ -51,9 +53,13 @@ class Ball:
         return None
 
     def update(self, ball_list):
+        global score
         if self.x <= 0 or self.x >= DISPLAY_SIZE[0]:
             self.vel["x"] *= -1
-        if self.y <= 0 or self.y >= DISPLAY_SIZE[1] or platform.colliderect(self.rect) and self.y < DISPLAY_SIZE[1]-95:
+        if self.y <= 0 or self.y >= DISPLAY_SIZE[1]:
+            self.vel["y"] *= -1
+        if platform.colliderect(self.rect) and self.y < DISPLAY_SIZE[1]-95:
+            score += 1
             self.vel["y"] *= -1
         self.x += self.vel["x"]
         self.y += self.vel["y"]
@@ -72,22 +78,66 @@ class Ball:
                 return ["x", "y"]
         for point in ball.rect.midleft, ball.rect.midright:
             if self.rect.collidepoint(point):
-                return ["x"]
+               return ["x"]
         for point in ball.rect.midbottom, ball.rect.midtop:
             if self.rect.collidepoint(point):
                 return ["y"]
 
 
-ball_num = 1
-balls = list()
-balls.append(Ball())
+def text_gen(text, pos, color):
+    text = FONT.render(text, True, color)
+    rect = text.get_rect()
+    rect.center = pos
+    DISPLAY.blit(text, rect)
+
+
+def button_gen(text, font_color, color, rect):
+    text = FONT.render(text, True, font_color)
+    text_rect = text.get_rect()
+    text_rect.center = (rect.center[0], rect.center[1])
+    pygame.draw.rect(DISPLAY, color, rect)
+    DISPLAY.blit(text, text_rect)
+
+
 # Main Loop
 while not done:
+    while mode == "menu":
+        ball_num = 1
+        minimum_time = 0
+        score = 0
+        balls = list()
+        DISPLAY.fill(BLACK)
+        text_gen("The RandomMiniGame", (DISPLAY_SIZE[0]//2, DISPLAY_SIZE[1]//2-50), WHITE)
+        easy_rect = pygame.Rect(DISPLAY_SIZE[0] // 2 - 200, DISPLAY_SIZE[1] // 2, 100, 40)
+        mid_rect = pygame.Rect(DISPLAY_SIZE[0] // 2 - 80, DISPLAY_SIZE[1] // 2, 160, 40)
+        hard_rect = pygame.Rect(DISPLAY_SIZE[0] // 2 + 100, DISPLAY_SIZE[1] // 2, 100, 40)
+        button_gen("EASY", WHITE, GREEN, easy_rect)
+        button_gen("MEDIUM", WHITE, ORANGE, mid_rect)
+        button_gen("HARD", WHITE, RED, hard_rect)
+        pygame.display.flip()
+        for e in pygame.event.get():
+            if e.type == QUIT or pygame.key.get_pressed()[pygame.K_q]:
+                pygame.quit()
+                sys.exit()
+            if e.type == pygame.MOUSEBUTTONDOWN and easy_rect.collidepoint(pygame.mouse.get_pos()):
+                mode = "game"
+                speed = NORMAL_SPEED//1.5
+                balls.append(Ball())
+            if e.type == pygame.MOUSEBUTTONDOWN and mid_rect.collidepoint(pygame.mouse.get_pos()):
+                mode = "game"
+                speed = NORMAL_SPEED
+                balls.append(Ball())
+            if e.type == pygame.MOUSEBUTTONDOWN and hard_rect.collidepoint(pygame.mouse.get_pos()):
+                mode = "game"
+                speed = round(NORMAL_SPEED*1.5)
+                balls.append(Ball())
+        FPS_CLOCK.tick(FPS)
     while mode == "game":
         DISPLAY.fill(BLACK)
         pygame.draw.rect(DISPLAY, RED, kill_zone)
         platform.centerx = pygame.mouse.get_pos()[0]
         pygame.draw.rect(DISPLAY, BLUE, platform)
+        text_gen(str(score), (50, 50), WHITE)
         # Ball update
         for i in range(0, len(balls)):
             if len(balls) > i:
@@ -114,18 +164,21 @@ while not done:
     while mode == "lost":
         DISPLAY.fill(BLACK)
         DISPLAY.blit(TEXT_LOSE, text_rect)
-        pygame.draw.rect(DISPLAY, WHITE, button_quit_rect)
-        pygame.draw.rect(DISPLAY, WHITE, button_reset_rect)
-        DISPLAY.blit(TEXT_RESET, button_reset_rect)
-        DISPLAY.blit(TEXT_QUIT, button_quit_rect)
+        reset_rect = pygame.Rect(DISPLAY_SIZE[0] // 2 - 150, DISPLAY_SIZE[1] // 2 + 100, 120, 40)
+        menu_rect = pygame.Rect(DISPLAY_SIZE[0] // 2 + 50, DISPLAY_SIZE[1] // 2 + 100, 100, 40)
+        button_gen("RESET", WHITE, GREEN, reset_rect)
+        button_gen("MENU", WHITE, RED, menu_rect)
         pygame.display.flip()
         FPS_CLOCK.tick(FPS)
         for e in pygame.event.get():
-            if e.type == pygame.MOUSEBUTTONDOWN and button_reset_rect.collidepoint(pygame.mouse.get_pos()):
+            if e.type == pygame.MOUSEBUTTONDOWN and reset_rect.collidepoint(pygame.mouse.get_pos()):
                 mode = "game"
                 minimum_time = 0
                 ball_num = 1
+                score = 0
                 balls.append(Ball())
-            if e.type == QUIT or pygame.key.get_pressed()[pygame.K_q] or e.type == pygame.MOUSEBUTTONDOWN and button_quit_rect.collidepoint(pygame.mouse.get_pos()):
+            if e.type == pygame.MOUSEBUTTONDOWN and menu_rect.collidepoint(pygame.mouse.get_pos()):
+                mode = "menu"
+            if e.type == QUIT or pygame.key.get_pressed()[pygame.K_q]:
                 pygame.quit()
                 sys.exit()
