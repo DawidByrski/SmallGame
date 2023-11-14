@@ -27,12 +27,6 @@ WHITE = (255, 255, 255)
 ORANGE = (255, 165, 0)
 
 FONT = pygame.font.Font('freesansbold.ttf', 32)
-TEXT_LOSE = FONT.render('YOU LOST', True, RED)
-TEXT_QUIT = FONT.render('QUIT', True, BLACK)
-TEXT_RESET = FONT.render('AGAIN', True, BLACK)
-text_rect = TEXT_LOSE.get_rect()
-text_rect.center = (DISPLAY_SIZE[0]//2, DISPLAY_SIZE[1]//2)
-
 
 platform = pygame.Rect(DISPLAY_SIZE[0]//2, DISPLAY_SIZE[1]-100, 100, 10)
 kill_zone = pygame.Rect(0, DISPLAY_SIZE[1]-10, DISPLAY_SIZE[0], 10)
@@ -78,7 +72,7 @@ class Ball:
                 return ["x", "y"]
         for point in ball.rect.midleft, ball.rect.midright:
             if self.rect.collidepoint(point):
-               return ["x"]
+                return ["x"]
         for point in ball.rect.midbottom, ball.rect.midtop:
             if self.rect.collidepoint(point):
                 return ["y"]
@@ -163,7 +157,7 @@ while not done:
         FPS_CLOCK.tick(FPS)
     while mode == "lost":
         DISPLAY.fill(BLACK)
-        DISPLAY.blit(TEXT_LOSE, text_rect)
+        text_gen("YOU LOST", (DISPLAY_SIZE[0]//2, DISPLAY_SIZE[1]//2), WHITE)
         reset_rect = pygame.Rect(DISPLAY_SIZE[0] // 2 - 150, DISPLAY_SIZE[1] // 2 + 100, 120, 40)
         menu_rect = pygame.Rect(DISPLAY_SIZE[0] // 2 + 50, DISPLAY_SIZE[1] // 2 + 100, 100, 40)
         button_gen("RESET", WHITE, GREEN, reset_rect)
